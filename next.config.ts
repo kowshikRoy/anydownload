@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // No special headers needed for direct downloads
 };
 
 export default nextConfig;
