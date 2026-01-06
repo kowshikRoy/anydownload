@@ -15,6 +15,8 @@ export async function GET(request: Request) {
       url,
       '--dump-json',
       '--no-playlist',
+      // Explicitly use node for deciphering to fix "No supported JavaScript runtime"
+      '--js-runtimes', 'node',
       // Get all formats
       '-f', 'all'
     ]);

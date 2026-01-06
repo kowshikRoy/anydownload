@@ -32,6 +32,7 @@ export async function GET(request: Request) {
     const stream = ytDlpWrap.execStream([
       videoUrl,
       '-f', itag,
+      '--js-runtimes', 'node',
     ]);
 
     // Log errors from stderr
