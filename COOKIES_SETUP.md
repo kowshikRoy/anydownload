@@ -40,4 +40,5 @@ To bypass YouTube's "Sign in to confirm you're not a bot" errors in serverless e
 
 ## Troubleshooting
 - **Cookies Expire**: If downloads stop working after a few months, repeat this process to get fresh cookies.
+- **"Sign in to confirm you're not a bot" Error**: This is the most common error when cookies are missing, invalid, or expired. Follow the steps above to generate and add new cookies.
 - **Invalid Format**: Ensure you copied the *raw text* from the file, not the file path.

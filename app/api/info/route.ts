@@ -33,27 +33,39 @@ export async function GET(request: Request) {
       '--no-playlist',
       '--no-cache-dir',
       // Explicitly use node for deciphering
-      '--js-runtimes', 'node',
+      '--js-runtimes',
+      'node',
       // Get all formats
-      '-f', 'all'
+      '-f',
+      'all',
     ];
 
-    if (cookiesPath) {
-      args.push('--cookies', cookiesPath);
-      // When cookies are present, use the default web client.
-      // Android client is often more restricted or requires different authentication proof.
-      // Default (web) client mimics a logged-in browser where the cookies were exported from.
-      args.push('--extractor-args', 'youtube:player_client=web');
-    } else {
-      // Without cookies, Android is sometimes a better fallback than Web, 
-      // but often blocked too. We'll stick to Android as the unauthenticated fallback.
-      args.push('--extractor-args', 'youtube:player_client=android');
-    }
+    const exec = async (playerClient: 'web' | 'android') => {
+      const finalArgs = [...args];
+      if (cookiesPath) {
+        finalArgs.push('--cookies', cookiesPath);
+      }
+      finalArgs.push('--extractor-args', `youtube:player_client=${playerClient}`);
 
-    // Capture both stdout and stderr (if possible with execPromise, otherwise we rely on error thrown)
-    // execPromise usually only returns stdout. If it fails, it throws.
-    // If it succeeds but returns partial data/warnings, we see it in metadata logs if we add them.
-    const metadata = await ytDlp.execPromise(args);
+      return await ytDlp.execPromise(finalArgs);
+    };
+
+    let metadata;
+    try {
+      metadata = await exec('web');
+    } catch (error: any) {
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('Sign in to confirm')) {
+        // Retry with android client
+        try {
+          metadata = await exec('android');
+        } catch (retryError: any) {
+          throw error; // Throw original error
+        }
+      } else {
+        throw error;
+      }
+    }
 
     // Debug output length
     console.log('Metadata length:', metadata.length);
