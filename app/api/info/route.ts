@@ -40,10 +40,15 @@ export async function GET(request: Request) {
 
     if (cookiesPath) {
       args.push('--cookies', cookiesPath);
+      // When cookies are present, use the default web client.
+      // Android client is often more restricted or requires different authentication proof.
+      // Default (web) client mimics a logged-in browser where the cookies were exported from.
+      args.push('--extractor-args', 'youtube:player_client=web');
+    } else {
+      // Without cookies, Android is sometimes a better fallback than Web, 
+      // but often blocked too. We'll stick to Android as the unauthenticated fallback.
+      args.push('--extractor-args', 'youtube:player_client=android');
     }
-    // Always use Android client - it supports streams best if authenticated,
-    // and if unauthenticated, it fails loudly (Sign in) rather than silently (MHTML)
-    args.push('--extractor-args', 'youtube:player_client=android');
 
     // Capture both stdout and stderr (if possible with execPromise, otherwise we rely on error thrown)
     // execPromise usually only returns stdout. If it fails, it throws.
@@ -113,6 +118,13 @@ export async function GET(request: Request) {
     const errorMessage = error?.message || '';
 
     // Check for specific bot detection messages
+    if (errorMessage.includes('cookies are no longer valid')) {
+      return NextResponse.json({
+        error: 'YouTube Cookies Expired. Please export new cookies and update the YOUTUBE_COOKIES environment variable.',
+        details: 'The provided cookies have been rotated by YouTube.'
+      }, { status: 403 });
+    }
+
     if (errorMessage.includes('Sign in to confirm') || errorMessage.includes('cookies')) {
       return NextResponse.json({
         error: 'Bot detection triggered. Please configure YOUTUBE_COOKIES in Vercel settings.',
@@ -123,3 +135,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: errorMessage || 'Failed to fetch video info' }, { status: 500 });
   }
 }
+
