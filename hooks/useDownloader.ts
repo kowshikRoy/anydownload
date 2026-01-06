@@ -45,9 +45,13 @@ export function useDownloader() {
     }
   };
 
-  const getDownloadLink = (format: VideoFormat, videoInfo: VideoInfo) => {
+  const getDownloadLink = (format: VideoFormat, videoInfo: VideoInfo, type: 'download' | 'view' = 'download') => {
     const filename = `${videoInfo.title.replace(/[^a-z0-9]/gi, '_').substring(0, 50)}.${format.container}`;
-    return `/api/proxy?videoId=${encodeURIComponent(videoInfo.videoId)}&itag=${format.itag}&filename=${encodeURIComponent(filename)}`;
+    let link = `/api/proxy?videoId=${encodeURIComponent(videoInfo.videoId)}&itag=${format.itag}&filename=${encodeURIComponent(filename)}`;
+    if (type === 'view') {
+      link += '&disposition=inline';
+    }
+    return link;
   };
 
   return {

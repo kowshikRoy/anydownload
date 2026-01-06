@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useDownloader } from '@/hooks/useDownloader';
-import { Search, Download, Loader2, Music, Video, AlertCircle, ExternalLink } from 'lucide-react';
+import { Search, Download, Loader2, Music, Video, AlertCircle, ExternalLink, Play, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 
 export default function Home() {
   const [url, setUrl] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const { status, videoInfo, fetchInfo, getDownloadLink } = useDownloader();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -58,6 +59,14 @@ export default function Home() {
     return getRes(b) - getRes(a);
   }).slice(0, 12) || []; 
 
+  const handleShare = (itag: number) => {
+    if (!videoInfo) return;
+    const shareUrl = `${window.location.origin}/watch?v=${videoInfo.videoId}&itag=${itag}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedId(itag.toString());
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background Gradients */}
@@ -91,7 +100,7 @@ export default function Home() {
           </div>
           <input
             type="text"
-            placeholder="Paste YouTube Link here..."
+            placeholder="Paste Link (YouTube, Facebook, Instagram...)"
             className="w-full bg-slate-900/50 border border-slate-800 backdrop-blur-md rounded-2xl py-4 pl-12 pr-4 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-xl"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -161,15 +170,36 @@ export default function Home() {
                             <span>{f.contentLength ? (parseInt(f.contentLength) / 1024 / 1024).toFixed(1) + ' MB' : 'Unknown Size'}</span>
                           </div>
                         </div>
-                        <a
-                          href={getDownloadLink(f, videoInfo)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-slate-700 hover:bg-blue-600 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-2"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          <span>Direct Link</span>
-                        </a>
+                        <div className="flex gap-2">
+                          <a
+                            href={getDownloadLink(f, videoInfo, 'view')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-2 bg-slate-700 hover:bg-purple-600 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-2"
+                            title="Watch in Browser"
+                          >
+                            <Play className="w-4 h-4" />
+                            <span className="hidden sm:inline">Watch</span>
+                          </a>
+                          <a
+                            href={getDownloadLink(f, videoInfo, 'download')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-2"
+                            title="Download File"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span className="hidden sm:inline">Download</span>
+                          </a>
+                          <button
+                            onClick={() => handleShare(f.itag)}
+                            className="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-2"
+                            title="Share Watch Link"
+                          >
+                            <Share2 className="w-4 h-4" />
+                            <span className="hidden sm:inline">{copiedId === f.itag.toString() ? 'Copied!' : 'Share'}</span>
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

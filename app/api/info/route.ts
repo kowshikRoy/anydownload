@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import ytdl from '@distube/ytdl-core';
+import { getYtDlp } from '@/lib/yt-dlp';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -10,30 +10,35 @@ export async function GET(request: Request) {
   }
 
   try {
-    if (!ytdl.validateURL(url)) {
-      return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
-    }
+    const ytDlp = await getYtDlp();
+    const metadata = await ytDlp.execPromise([
+      url,
+      '--dump-json',
+      '--no-playlist',
+      // Get all formats
+      '-f', 'all'
+    ]);
 
-    const info = await ytdl.getInfo(url);
-    const formats = ytdl.filterFormats(info.formats, 'videoandaudio');
-    const videoFormats = ytdl.filterFormats(info.formats, 'videoonly');
-    const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
+    const info = JSON.parse(metadata);
+
+    // Normalize formats
+    const formats = (info.formats || []).map((f: any) => ({
+      itag: f.format_id, // Use format_id as itag replacement
+      qualityLabel: f.resolution || f.quality || 'unknown',
+      container: f.ext,
+      hasVideo: f.vcodec !== 'none',
+      hasAudio: f.acodec !== 'none',
+      url: f.url,
+      contentLength: f.filesize ? f.filesize.toString() : undefined,
+      quality: f.quality,
+    }));
 
     return NextResponse.json({
-      videoId: info.videoDetails.videoId,
-      title: info.videoDetails.title,
-      thumbnail: info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1].url,
-      lengthSeconds: info.videoDetails.lengthSeconds,
-      formats: [...formats, ...videoFormats, ...audioFormats].map((f) => ({
-        itag: f.itag,
-        qualityLabel: f.qualityLabel,
-        container: f.container,
-        hasVideo: f.hasVideo,
-        hasAudio: f.hasAudio,
-        url: f.url,
-        contentLength: f.contentLength,
-        quality: f.quality,
-      })),
+      videoId: info.id,
+      title: info.title,
+      thumbnail: info.thumbnail,
+      lengthSeconds: info.duration?.toString() || '0',
+      formats: formats,
     });
   } catch (error) {
     console.error('Error fetching video info:', error);
