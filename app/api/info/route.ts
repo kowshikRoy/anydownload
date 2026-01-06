@@ -45,7 +45,16 @@ export async function GET(request: Request) {
     // and if unauthenticated, it fails loudly (Sign in) rather than silently (MHTML)
     args.push('--extractor-args', 'youtube:player_client=android');
 
+    // Capture both stdout and stderr (if possible with execPromise, otherwise we rely on error thrown)
+    // execPromise usually only returns stdout. If it fails, it throws.
+    // If it succeeds but returns partial data/warnings, we see it in metadata logs if we add them.
     const metadata = await ytDlp.execPromise(args);
+
+    // Debug output length
+    console.log('Metadata length:', metadata.length);
+    if (metadata.length < 500) {
+      console.log('Short metadata content:', metadata);
+    }
 
     // yt-dlp --dump-json output can sometimes contain warnings or consist of multiple lines
     // We want the first valid JSON line that looks like a video info object
