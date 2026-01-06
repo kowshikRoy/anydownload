@@ -11,7 +11,21 @@ export async function GET(request: Request) {
 
   try {
     const ytDlp = await getYtDlp();
+
+    // Debug: Check binary version
+    try {
+      const version = await ytDlp.execPromise(['--version']);
+      console.log('yt-dlp version:', version.trim());
+    } catch (e) {
+      console.error('Failed to get version:', e);
+    }
+
     const cookiesPath = ensureCookies();
+    console.log('Cookies configured:', cookiesPath ? 'YES' : 'NO');
+    if (cookiesPath) {
+      const stat = require('fs').statSync(cookiesPath);
+      console.log('Cookies file size:', stat.size);
+    }
 
     const args = [
       url,
