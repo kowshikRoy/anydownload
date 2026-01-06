@@ -33,6 +33,7 @@ export async function GET(request: Request) {
       videoUrl,
       '-f', itag,
       '--js-runtimes', 'node',
+      '--extractor-args', 'youtube:player_client=android',
     ]);
 
     // Log errors from stderr

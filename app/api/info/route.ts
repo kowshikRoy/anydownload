@@ -17,6 +17,8 @@ export async function GET(request: Request) {
       '--no-playlist',
       // Explicitly use node for deciphering to fix "No supported JavaScript runtime"
       '--js-runtimes', 'node',
+      // Use Android client to minimize "Sign in to confirm you're not a bot" errors
+      '--extractor-args', 'youtube:player_client=android',
       // Get all formats
       '-f', 'all'
     ]);
