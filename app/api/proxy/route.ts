@@ -38,10 +38,8 @@ export async function GET(request: Request) {
 
     if (cookiesPath) {
       args.push('--cookies', cookiesPath);
-      args.push('--extractor-args', 'youtube:player_client=android');
-    } else {
-      args.push('--extractor-args', 'youtube:player_client=tv');
     }
+    args.push('--extractor-args', 'youtube:player_client=android');
 
     // Create stream
     const stream = ytDlpWrap.execStream(args);

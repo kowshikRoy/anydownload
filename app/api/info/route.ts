@@ -26,12 +26,10 @@ export async function GET(request: Request) {
 
     if (cookiesPath) {
       args.push('--cookies', cookiesPath);
-      // With cookies, we can use the default client or android
-      args.push('--extractor-args', 'youtube:player_client=android');
-    } else {
-      // Without cookies, use TV client as a fallback to bypass bot detection on Vercel
-      args.push('--extractor-args', 'youtube:player_client=tv');
     }
+    // Always use Android client - it supports streams best if authenticated,
+    // and if unauthenticated, it fails loudly (Sign in) rather than silently (MHTML)
+    args.push('--extractor-args', 'youtube:player_client=android');
 
     const metadata = await ytDlp.execPromise(args);
 
@@ -63,16 +61,22 @@ export async function GET(request: Request) {
     }
 
     // Normalize formats
-    const formats = (info.formats || []).map((f: any) => ({
+    const formats = (info.formats || [])
+      .filter((f: any) => f.ext !== 'mhtml') // Filter out broken MHTML formats
+      .map((f: any) => ({
       itag: f.format_id, // Use format_id as itag replacement
-      qualityLabel: f.resolution || f.quality || 'unknown',
+        qualityLabel: f.format_note || f.resolution || f.quality || 'unknown', // Use format_note (e.g. 1080p) first
       container: f.ext,
       hasVideo: f.vcodec !== 'none',
       hasAudio: f.acodec !== 'none',
       url: f.url,
-      contentLength: f.filesize ? f.filesize.toString() : undefined,
+        contentLength: f.filesize ? f.filesize.toString() : (f.filesize_approx ? f.filesize_approx.toString() : undefined),
       quality: f.quality,
     }));
+
+    if (formats.length === 0) {
+      throw new Error('No valid formats found. This usually means YouTube bot detection is blocking requests from this IP. Please configure YOUTUBE_COOKIES.');
+    }
 
     return NextResponse.json({
       videoId: info.id,
@@ -81,8 +85,18 @@ export async function GET(request: Request) {
       lengthSeconds: info.duration?.toString() || '0',
       formats: formats,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching video info:', error);
-    return NextResponse.json({ error: 'Failed to fetch video info' }, { status: 500 });
+    const errorMessage = error?.message || '';
+
+    // Check for specific bot detection messages
+    if (errorMessage.includes('Sign in to confirm') || errorMessage.includes('cookies')) {
+      return NextResponse.json({
+        error: 'Bot detection triggered. Please configure YOUTUBE_COOKIES in Vercel settings.',
+        details: 'YouTube requires authentication from this IP address.'
+      }, { status: 403 });
+    }
+
+    return NextResponse.json({ error: errorMessage || 'Failed to fetch video info' }, { status: 500 });
   }
 }
