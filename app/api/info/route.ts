@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getYtDlp } from '@/lib/yt-dlp';
+import { getYtDlp, ensureCookies } from '@/lib/yt-dlp';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,18 +11,29 @@ export async function GET(request: Request) {
 
   try {
     const ytDlp = await getYtDlp();
-    const metadata = await ytDlp.execPromise([
+    const cookiesPath = ensureCookies();
+
+    const args = [
       url,
       '--dump-json',
       '--no-playlist',
-      // Explicitly use node for deciphering to fix "No supported JavaScript runtime"
+      '--no-cache-dir',
+      // Explicitly use node for deciphering
       '--js-runtimes', 'node',
-      // Use iOS client to minimize "Sign in to confirm you're not a bot" errors
-      // Android client was failing with empty player responses
-      '--extractor-args', 'youtube:player_client=ios',
       // Get all formats
       '-f', 'all'
-    ]);
+    ];
+
+    if (cookiesPath) {
+      args.push('--cookies', cookiesPath);
+      // With cookies, we can use the default client or android
+      args.push('--extractor-args', 'youtube:player_client=android');
+    } else {
+      // Without cookies, use TV client as a fallback to bypass bot detection on Vercel
+      args.push('--extractor-args', 'youtube:player_client=tv');
+    }
+
+    const metadata = await ytDlp.execPromise(args);
 
     const info = JSON.parse(metadata);
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getBinaryPath, getYtDlp } from '@/lib/yt-dlp';
+import { getBinaryPath, getYtDlp, ensureCookies } from '@/lib/yt-dlp';
 
 function nodeStreamToIterator(stream: any) {
   return async function* () {
@@ -23,18 +23,28 @@ export async function GET(request: Request) {
   try {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const ytDlpWrap = await getYtDlp();
+    const cookiesPath = ensureCookies();
 
     const headers = new Headers();
     headers.set('Content-Disposition', `${disposition}; filename="${filename}"`);
     headers.set('Content-Type', 'video/mp4');
 
-    // Create stream
-    const stream = ytDlpWrap.execStream([
+    const args = [
       videoUrl,
       '-f', itag,
+      '--no-cache-dir',
       '--js-runtimes', 'node',
-      '--extractor-args', 'youtube:player_client=ios',
-    ]);
+    ];
+
+    if (cookiesPath) {
+      args.push('--cookies', cookiesPath);
+      args.push('--extractor-args', 'youtube:player_client=android');
+    } else {
+      args.push('--extractor-args', 'youtube:player_client=tv');
+    }
+
+    // Create stream
+    const stream = ytDlpWrap.execStream(args);
 
     // Log errors from stderr
     // stream.stderr.on('data', (d) => console.log('yt-dlp stderr:', d.toString()));

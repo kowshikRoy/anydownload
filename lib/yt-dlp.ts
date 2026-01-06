@@ -63,6 +63,16 @@ export const getBinaryPath = async () => {
   return binaryPath;
 };
 
+export const ensureCookies = () => {
+  const cookiesContent = process.env.YOUTUBE_COOKIES;
+  if (!cookiesContent) return null;
+
+  const cookiesPath = path.join('/tmp', 'youtube_cookies.txt');
+  // Always overwrite to ensure latest secrets
+  fs.writeFileSync(cookiesPath, cookiesContent);
+  return cookiesPath;
+};
+
 export const getYtDlp = async () => {
   const binaryPath = await getBinaryPath();
   return new YTDlpWrap(binaryPath);
