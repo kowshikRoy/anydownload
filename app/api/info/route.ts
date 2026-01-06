@@ -35,7 +35,32 @@ export async function GET(request: Request) {
 
     const metadata = await ytDlp.execPromise(args);
 
-    const info = JSON.parse(metadata);
+    // yt-dlp --dump-json output can sometimes contain warnings or consist of multiple lines
+    // We want the first valid JSON line that looks like a video info object
+    let info: any = null;
+    const lines = metadata.trim().split('\n');
+
+    for (const line of lines) {
+      try {
+        const parsed = JSON.parse(line);
+        // Basic validation to ensure it's a video info object (has id and title)
+        if (parsed.id && parsed.title) {
+          info = parsed;
+          break;
+        }
+      } catch (e) {
+        // Ignore parsing errors for non-JSON lines
+      }
+    }
+
+    if (!info) {
+      // Fallback: try parsing the whole thing if lines failed (unlikely but safe)
+      try {
+        info = JSON.parse(metadata);
+      } catch (e) {
+        throw new Error('Failed to parse yt-dlp output. Metadata length: ' + metadata.length + '. First 100 chars: ' + metadata.substring(0, 100));
+      }
+    }
 
     // Normalize formats
     const formats = (info.formats || []).map((f: any) => ({
