@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Fix for ESM default import
-const YTDlpWrap = YoutubeDlWrap.default || YoutubeDlWrap;
+const YTDlpWrap = (YoutubeDlWrap as any).default || YoutubeDlWrap;
 
 export const getBinaryPath = async () => {
   // Try local path first (project root)
